@@ -182,6 +182,7 @@ def cluster_boot():
         local("mkdir -p %(vpath)s" % defnode)
         cmd = "docker.io run --hostname=%(name)s --name=%(name)s -v %(vpath)s:/data %(ports)s %(linking)s -d -t %(image)s  /sbin/my_init" % defnode
         local(cmd)
+    network_up()
 
 def cluster_exec(cmd):
     for defnode in NODES :
