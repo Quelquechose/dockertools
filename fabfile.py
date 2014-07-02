@@ -39,6 +39,38 @@ DKCLEAN_CMD = "/home/docker/bin/dkclean.sh"
 PIPEWORK_CMD = "sudo /home/docker/bin/pipework"
 # TASKS
 
+@task
+def node(nodename,cmd=None):
+    """
+    The node mini wrapper, values for cmd arg : boot,start,stop,destroy
+      * fab node:{nodename},boot : do a 'docker.io run' on each container, run it once time
+      * fab node:{nodename},stop : stop all containers in the node
+      * fab node:{nodename},start : do a 'docker.io start' on each container
+      * fab node:{nodename},destroy : destroy all the node and clean docker's data (see dkclean)
+    """
+
+    generic_msg  = "\nAvailable commands are :\n  * start\n  * stop\n  * destroy\n  * boot"
+
+    if cmd == "start":
+        node_start(nodename)
+        puts(green("node start [OK]"))
+    elif cmd == "stop":
+        node_stop(nodename)
+        puts(green("node stop [OK]"))
+    elif cmd == "boot":
+        node_boot(nodename)
+        puts(green("node boot [OK]"))
+    elif cmd == "destroy":
+        if confirm("Are you sure to destroy ? Everything you need is backuped ?",default=False):
+            node_destroy(nodename)
+            puts(green("node destroy [OK]"))
+        else:
+            abort(yellow("node destroy [CANCELED]"))
+    elif cmd == None:
+        puts(generic_msg)
+    else:
+        error(red("commande %s not found !" % cmd))
+        puts(generic_msg)
 
 
 @task
@@ -123,16 +155,14 @@ def build(*images):
           "dpath" : os.path.join(DOCKERFILES_ROOT, dirname),
          }
         local("docker.io build -t qqch/%(image)s %(dpath)s" % options)
-
-    puts("Please run dkclean now !")
-
+    dkclean()
 
 @task
 def dkclean():
     """
-    Fabric wrapper around the dkclean command that clean docker's garbage
+    Warn the user to run the dkclean
     """
-    local(DKCLEAN_CMD)
+    warn(yellow("Please run : %s" % DKCLEAN_CMD))
    
 
 def dockerui_boot():
@@ -173,34 +203,77 @@ def getlinks(defnode):
         r = r + fragment
     return r
 
-        
+
+CMD_BOOT = "docker.io run --hostname=%(name)s --name=%(name)s -v %(vpath)s:/data %(ports)s %(linking)s -d -t %(image)s  /sbin/my_init" 
 def cluster_boot():
     for defnode in NODES:
         defnode["ports"] = getports(defnode)
         defnode["vpath"] = getvpath(defnode)
         defnode["linking"] = getlinks(defnode)
         local("mkdir -p %(vpath)s" % defnode)
-        cmd = "docker.io run --hostname=%(name)s --name=%(name)s -v %(vpath)s:/data %(ports)s %(linking)s -d -t %(image)s  /sbin/my_init" % defnode
+        cmd = CMD_BOOT % defnode
         local(cmd)
     network_up()
+
+def node_find(nodename):
+     """
+     Search a node by it's name, return None if not found
+     """
+     for node in NODES:
+          if node.get("name") == nodename:
+              found = True
+              return node
+     
+     puts(red("%s not found in cluster definition" % nodename))
+     return None      
+
+def node_boot(nodename):
+    defnode = node_find(nodename)
+    if defnode:
+        defnode["ports"] = getports(defnode)
+        defnode["vpath"] = getvpath(defnode)
+        defnode["linking"] = getlinks(defnode)
+        local(CMD_BOOT % defnode)
+        network_up(nodename) 
+
 
 def cluster_exec(cmd):
     for defnode in NODES :
         local(cmd % defnode)  
 
+def node_exec(nodename,cmd):
+    defnode = node_find(nodename)
+    if defnode:
+        local(cmd % defnode)
+
+
+CMD_STOP = "docker.io stop %(name)s"
 def cluster_stop():
-    cluster_exec("docker.io stop %(name)s")
+    cluster_exec(CMD_STOP)
 
+def node_stop(nodename):
+    node_exec(nodename, CMD_STOP)
 
+        
+CMD_DESTROY = "docker.io kill %(name)s"
 def cluster_destroy():
-    cluster_exec("docker.io kill %(name)s")
+    cluster_exec(CMD_DESTROY)
     dkclean()
 
+def node_destroy(nodename):
+    node_exec(nodename, CMD_DESTROY)    
+    dkclean()
 
+CMD_START = "docker.io start %(name)s"
 def cluster_start():
-    cluster_exec("docker.io start %(name)s")
+    cluster_exec(CMD_START)
     network_up()
 
+def node_start(nodename):
+    node_exec(nodename, CMD_START)
+    network_up(nodename)
+
+    
 def conf_render(tpl):
     for defnode in NODES:
         puts(tpl % defnode)
@@ -255,7 +328,7 @@ ufw allow out 220%(id)s
 
 
 @task
-def network_up():
+def network_up(onlyfornode=None):
     """
     Build privates networks between containers
     """
@@ -263,13 +336,16 @@ def network_up():
         options = {
             "pipework": PIPEWORK_CMD,
         } 
-        print network
         for idx, node in enumerate(network.get("nodes")):
             options["node"] = node
             options["ip"] = idx+1
             options.update(network)
             cmd = "%(pipework)s br%(id)s -i eth%(id)s  %(node)s  192.168.%(id)s.%(ip)s/24" % options
-            local(cmd) 
+            if onlyfornode is not None:
+                if node == onlyfornode:
+                    local(cmd)
+            else:                
+                local(cmd) 
 
 
 @task
