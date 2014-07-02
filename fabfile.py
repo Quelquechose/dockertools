@@ -19,7 +19,7 @@ NODES = [
     { "id": 2, "name" : "prodmysql01"          , "image":"qqch/mysql:latest"     , "extra_port":"3306%(id)s:3306"  },
     { "id": 3, "name" : "prodjibaku01"         , "image":"qqch/wsgi:latest"      , "extra_port":"800%(id)s:80"     },
     { "id": 4, "name" : "prodjeanglode01"      , "image":"qqch/wsgi:latest"      , "extra_port":"800%(id)s:80"     },
-    { "id": 5, "name" : "prodjeanglode02"      , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"   , "links":("prodmysql01:db",)  },
+    { "id": 5, "name" : "prodjeanglode02"      , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 6, "name" : "prodwp01"             , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 7, "name" : "prodtorzka01"         , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
 ]
