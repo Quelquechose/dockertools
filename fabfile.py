@@ -22,6 +22,7 @@ NODES = [
     { "id": 5, "name" : "prodjeanglode02"      , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 6, "name" : "prodwp01"             , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 7, "name" : "prodtorzka01"         , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
+    { "id": 8, "name" : "prodnolann01"         , "image":"qqch/http:latest"       , "extra_port":"800%(id)s:80"     },
 ]
 
 NETWORKS = [
