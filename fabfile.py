@@ -15,6 +15,8 @@ import os
 IMAGES = ["base","postgresql", "mysql", "http", "php", "wsgi"]
 
 NODES = [
+
+## PROD CONTAINERS
     { "id": 1, "name" : "prodpostgresql01"     , "image":"qqch/postgresql:latest", "extra_port":"5432%(id)s:5432"  },
     { "id": 2, "name" : "prodmysql01"          , "image":"qqch/mysql:latest"     , "extra_port":"3306%(id)s:3306"  },
     { "id": 3, "name" : "prodjibaku01"         , "image":"qqch/wsgi:latest"      , "extra_port":"800%(id)s:80"     },
@@ -23,6 +25,9 @@ NODES = [
     { "id": 6, "name" : "prodwp01"             , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 7, "name" : "prodtorzka01"         , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 8, "name" : "prodnolann01"         , "image":"qqch/http:latest"       , "extra_port":"800%(id)s:80"     },
+
+## TEST CONTAINERS
+    { "id": 9, "name" : "jouet01"         , "image":"qqch/base:latest"       ,  },
 ]
 
 NETWORKS = [
@@ -374,3 +379,83 @@ def ls():
         puts("------------------------")
         pprint(node) 
         puts("------------------------\n\n")
+
+
+### MYSQL PART
+
+from tissu.tasks import *
+
+import os, sys
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
+
+def run_mysql(query, shell=False):
+    from tissu.conf import settings
+
+    node = node_find(settings.NODE_NAME)
+    options = {"query": query}
+    options.update(settings.DB)
+
+    if shell:
+        cmd = "mysql --user=%(user)s --host=%(host)s -p%(password)s" % options
+    else:
+        cmd = "mysql --user=%(user)s --host=%(host)s -p%(password)s -e \"%(query)s\"" % options
+    run(cmd) 
+
+@roles('mysql')
+@task
+def mysql_shell():
+    run_mysql("", shell=True)
+
+@roles('mysql')
+@task
+def mysql_user_create(login, password,host="%"):
+    sql="CREATE USER '%s'@'%s' IDENTIFIED BY '%s'" % (login,host,password)
+    run_mysql(sql)
+
+
+@roles('mysql')
+@task
+def mysql_user_delete(login):
+    drop = "DROP USER %s" % (login,)
+    run_mysql(drop)
+
+@roles('mysql')
+@task
+def mysql_database_create(name):
+    sql="CREATE DATABASE %s" % (name,)
+    run_mysql(sql)
+
+@roles('mysql')
+@task
+def mysql_privileges_add(login,database,host="localhost"):
+    """
+    login, database, host=localhost
+    """
+    sql = "GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s'" % (database,login,host)
+    run_mysql(sql)
+
+@roles('mysql')
+@task
+def mysql_privileges_delete(login,database,host="localhost"):
+    sql ="REVOKE ALL PRIVILEGES ON %s.* FROM '%s'@'%s'" % (database,login,host)
+    run_mysql(sql)
+
+@roles('mysql')
+@task
+def mysql_privileges_show(login,host="localhost"):
+    sql = "SHOW GRANTS FOR %s@%s" % (login,host)
+    run_mysql(sql)
+
+@roles('mysql')
+@task
+def mysql_account_create(login,password):
+    """
+    login password
+    """
+    mysql_user_create(login,password)
+    mysql_database_create(login)
+    mysql_privileges_add(login,login)
+
