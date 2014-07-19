@@ -25,9 +25,11 @@ NODES = [
     { "id": 6, "name" : "prodwp01"             , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 7, "name" : "prodtorzka01"         , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
     { "id": 8, "name" : "prodnolann01"         , "image":"qqch/http:latest"       , "extra_port":"800%(id)s:80"     },
+    { "id": 9, "name" : "prodjibaku02"         , "image":"qqch/php:latest"       , "extra_port":"800%(id)s:80"     },
+
 
 ## TEST CONTAINERS
-    { "id": 9, "name" : "jouet01"         , "image":"qqch/base:latest"       ,  },
+#    { "id": 9, "name" : "jouet01"         , "image":"qqch/base:latest"       ,  },
 ]
 
 NETWORKS = [
@@ -35,7 +37,8 @@ NETWORKS = [
     { "id": 2, "nodes": ("prodpostgresql01", "prodjibaku01")},
     { "id": 3, "nodes": ("prodmysql01", "prodwp01")},
     { "id": 4, "nodes": ("prodmysql01", "prodtorzka01")},
-
+    { "id": 5, "nodes": ("prodmysql01", "prodjibaku01")},
+    { "id": 6, "nodes": ("prodmysql01", "prodjibaku02")},
 ]
 
 DOCKERFILES_ROOT = "/home/docker/dockerfiles"
@@ -287,7 +290,7 @@ def conf_render(tpl):
 @task
 def conf(cmd=None):
     """
-    The conf mini wrapper, values for cmd arg : boot,start,stop,destroy
+    The conf mini wrapper, values for cmd arg : munin, upstreams, ufw
       * fab conf:munin : generate the node tree for /etc/munin/munin.conf
       * fab conf:upstreams : generate the upstreams definition for nginx
       * fab conf:ufw : generate the ufw rules for making ssh available from the outside for every container
@@ -295,7 +298,7 @@ def conf(cmd=None):
 
     generic_msg  = "\nAvailable commands are :\n  * munin\n  * ssh"
 
-    if cmd == "ssh":
+    if cmd == "munin":
         conf_munin()
     elif cmd == "upstreams":
         conf_upstreams()
