@@ -430,7 +430,14 @@ def mysql_database_create(name):
 
 @roles('mysql')
 @task
-def mysql_privileges_add(login,database,host="localhost"):
+def mysql_database_delete(name):
+    sql ="DROP DATABASE %s" % (name,)
+    run_mysql(sql)
+
+
+@roles('mysql')
+@task
+def mysql_privileges_add(login,database,host="%"):
     """
     login, database, host=localhost
     """
@@ -439,13 +446,13 @@ def mysql_privileges_add(login,database,host="localhost"):
 
 @roles('mysql')
 @task
-def mysql_privileges_delete(login,database,host="localhost"):
+def mysql_privileges_delete(login,database,host="%"):
     sql ="REVOKE ALL PRIVILEGES ON %s.* FROM '%s'@'%s'" % (database,login,host)
     run_mysql(sql)
 
 @roles('mysql')
 @task
-def mysql_privileges_show(login,host="localhost"):
+def mysql_privileges_show(login,host="%"):
     sql = "SHOW GRANTS FOR %s@%s" % (login,host)
     run_mysql(sql)
 
